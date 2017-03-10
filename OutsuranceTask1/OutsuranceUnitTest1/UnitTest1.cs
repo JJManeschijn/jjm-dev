@@ -2,12 +2,20 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using OutsuranceTask1;
 using System.IO;
+using System.Collections.Generic;
 
 namespace OutsuranceUnitTest1
 {
     [TestClass]
     public class UnitTest1
     {
+        /// <summary>
+        /// Test process where input data is good. 
+        /// Expected results to pass:
+        /// 1. Process returnd string must be empty.
+        /// 2. Output Names file must exist.
+        /// 3. Output Addresses file must exist.
+        /// </summary>
         [TestMethod]
         public void TestGoodFile()
         {
@@ -17,7 +25,7 @@ namespace OutsuranceUnitTest1
             CreateGoodCSV(csvFileName);
             ProcessFile processFile = new ProcessFile();
             var result = processFile.ValidateCSV(csvFileName);
-            bool hasHeader =  processFile.ValidateCSVHeader(csvFileName) == "True";
+            bool hasHeader = processFile.ValidateCSVHeader(csvFileName) == "True";
             result = processFile.ProcessCSV(csvFileName, hasHeader);
             result = processFile.ExportNames(namesFileName);
             result = processFile.ExportAddresses(addressesFileName);
@@ -27,6 +35,13 @@ namespace OutsuranceUnitTest1
             DeleteFile(addressesFileName);
         }
 
+        /// <summary>
+        /// Test process where input data is NOT good. 
+        /// Expected results to pass:
+        /// 1. Process return string must NOT be empty (contains error information).
+        /// 2. Output Names file must NOT exist.
+        /// 3. Output Addresses file must NOT exist.
+        /// </summary>
         [TestMethod]
         public void TestBadFile()
         {
@@ -46,6 +61,14 @@ namespace OutsuranceUnitTest1
             DeleteFile(addressesFileName);
         }
 
+        /// <summary>
+        /// Test Names output grouping and sorting results by perform file comparison between hard-coded file containing expected output and physical output file. 
+        /// Expected results to pass:
+        /// 1. Process return string must be empty.
+        /// 2. Generated Hard-coded Names file must exist.
+        /// 3. Output Names file must exist.
+        /// 4. File comparison must return TRUE.
+        /// </summary>
         [TestMethod]
         public void TestNamesOutput()
         {
@@ -65,6 +88,14 @@ namespace OutsuranceUnitTest1
             DeleteFile(nameTestFile);
         }
 
+        /// <summary>
+        /// Test Addresses output grouping and sorting results by perform file comparison between hard-coded file containing expected output and physical output file. 
+        /// Expected results to pass:
+        /// 1. Process return string must be empty.
+        /// 2. Generated Hard-coded Addresses file must exist.
+        /// 3. Output Addresses file must exist.
+        /// 4. File comparison must return TRUE.
+        /// </summary>
         [TestMethod]
         public void TestAddressesOutput()
         {
@@ -82,6 +113,54 @@ namespace OutsuranceUnitTest1
             DeleteFile(csvFileName);
             DeleteFile(addressesFileName);
             DeleteFile(addressTestFile);
+        }
+
+        /// <summary>
+        /// Test Names output grouping and sorting results by perform comparison between output file contents loaded to list and list of expected results. 
+        /// Expected results to pass:
+        /// 1. Process return string must be empty.
+        /// 2. Generated Hard-coded Addresses file must exist.
+        /// 3. Output Addresses file must exist.
+        /// 4. File comparison must return TRUE.
+        /// </summary>
+        [TestMethod]
+        public void TestNamesOutputValidation()
+        {
+            string csvFileName = Path.Combine(System.AppDomain.CurrentDomain.BaseDirectory, "GoodCSV.csv");
+            string namesFileName = Path.Combine(System.AppDomain.CurrentDomain.BaseDirectory, "GoodNames.txt");
+            CreateGoodCSV(csvFileName);
+            ProcessFile processFile = new ProcessFile();
+            var result = processFile.ValidateCSV(csvFileName);
+            bool hasHeader = processFile.ValidateCSVHeader(csvFileName) == "True";
+            result = processFile.ProcessCSV(csvFileName, hasHeader);
+            result = processFile.ExportNames(namesFileName);
+            Assert.IsTrue((string.IsNullOrEmpty(result)) & (File.Exists(namesFileName)) & (ValidateOutput(namesFileName, BuildNamesValidationSet())));
+            DeleteFile(csvFileName);
+            DeleteFile(namesFileName);
+        }
+
+        /// <summary>
+        /// Test Addresses output grouping and sorting results by perform comparison between output file contents loaded to list and list of expected results. 
+        /// Expected results to pass:
+        /// 1. Process return string must be empty.
+        /// 2. Generated Hard-coded Addresses file must exist.
+        /// 3. Output Addresses file must exist.
+        /// 4. File comparison must return TRUE.
+        /// </summary>
+        [TestMethod]
+        public void TestAddressesOutputValidation()
+        {
+            string csvFileName = Path.Combine(System.AppDomain.CurrentDomain.BaseDirectory, "GoodCSV.csv");
+            string addressesFileName = Path.Combine(System.AppDomain.CurrentDomain.BaseDirectory, "GoodAddresses.txt");
+            CreateGoodCSV(csvFileName);
+            ProcessFile processFile = new ProcessFile();
+            var result = processFile.ValidateCSV(csvFileName);
+            bool hasHeader = processFile.ValidateCSVHeader(csvFileName) == "True";
+            result = processFile.ProcessCSV(csvFileName, hasHeader);
+            result = processFile.ExportAddresses(addressesFileName);
+            Assert.IsTrue((string.IsNullOrEmpty(result)) & (File.Exists(addressesFileName)) & (ValidateOutput(addressesFileName, BuildAddressValidationSet())));
+            DeleteFile(csvFileName);
+            DeleteFile(addressesFileName);
         }
 
         void CreateGoodCSV(string fileName)
@@ -154,6 +233,14 @@ namespace OutsuranceUnitTest1
 
         }
 
+        /// <summary>
+        /// Performs a comparison to check if two files have exactly the same contents. 
+        /// In this case the comparison is used to check the hard-coded expected results with the actual process output files for 
+        /// correct number of lines as well as sorting and grouping.
+        /// </summary>
+        /// <param name="file1"></param>
+        /// <param name="file2"></param>
+        /// <returns></returns>
         bool CompareFileContent(string file1, string file2)
         {
             bool result = true;
@@ -199,5 +286,89 @@ namespace OutsuranceUnitTest1
                 File.Delete(fileName);
             }
         }
+
+        /// <summary>
+        /// Another method to test processed results vs expected results for processing and sorting & grouping.
+        /// </summary>
+        /// <param name="outputFile"></param>
+        /// <param name="validationDataSet"></param>
+        /// <returns></returns>
+        bool ValidateOutput(string outputFile, List<string> validationDataSet)
+        {
+            bool result = true;
+
+            //load results from output file to list
+            var outputDataSet = new List<string>();
+            using (StreamReader streamReader = new StreamReader(outputFile))
+            {
+                while (!streamReader.EndOfStream)
+                {
+                    outputDataSet.Add(streamReader.ReadLine());
+                }
+            }
+            //compare output dataset with validation dataset
+            if (outputDataSet.Count != validationDataSet.Count)
+            {
+                result = false;
+            }
+            else
+            {
+                for (int i = 0; i < outputDataSet.Count; i++)
+                {
+                    if (outputDataSet[i] != validationDataSet[i])
+                    {
+                        result = false;
+                        break;
+                    }
+                }
+            }
+            return result;
+        }
+
+        List<string> BuildNamesValidationSet()
+        {
+            var result = new List<string>
+            {
+                "Smith,3",
+                "Brown,2",
+                "Johnson,2",
+                "Jones,2",
+                "der,1",
+                "Gareth,1",
+                "Gordon,1",
+                "Heinrich,1",
+                "Joey,1",
+                "John,1",
+                "Koos,1",
+                "Matt,1",
+                "Merwe,1",
+                "Peter,1",
+                "Sally,1",
+                "Tim,1",
+                "van,1",
+            };
+            return result;
+        }
+
+        List<string> BuildAddressValidationSet()
+        {
+            var result = new List<string>
+            {
+                "11a 11th Ave",
+                "147 17th Ave",
+                "22 7de Laan",
+                "12 Acton St",
+                "31b Church Str",
+                "16 Clifton Rd",
+                "31 Clifton Rd",
+                "22 Jones Rd",
+                "9a Weaver Str",
+                "256 West Str",
+            };
+            return result;
+        }
     }
 }
+
+
+
